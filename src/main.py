@@ -13,14 +13,19 @@
 
 # Library imports
 from vex import *
-
+import testmath
 # Brain should be defined by default
 brain=Brain()
 
 # Robot configuration code
-left_drive_smart = Motor(Ports.PORT1, GearSetting.RATIO_18_1, False)
-right_drive_smart = Motor(Ports.PORT10, GearSetting.RATIO_18_1, True)
-drivetrain = DriveTrain(left_drive_smart, right_drive_smart, 319.19, 295, 40, MM, 1)
+left1_motor = Motor(Ports.PORT11)
+left2_motor = Motor(Ports.PORT12)
+left_drive_group = MotorGroup(left1_motor, left2_motor)
+right1_motor = Motor(Ports.PORT8)
+right2_motor = Motor(Ports.PORT10)
+right_drive_group = MotorGroup(right1_motor, right2_motor)
+
+drivetrain = DriveTrain(left_drive_group, right_drive_group, 319.19, 295, 40, MM, 1)
 
 # Begin project code
 
@@ -51,4 +56,12 @@ while True:
 
     # A brief delay to allow text to be printed without distortion or tearing
     wait(100,MSEC)
+    
+    
+    
+    drivetrain.drive(FORWARD)
+    velocity = testmath.degrees_per_second_to_m_s(drivetrain.velocity(VelocityUnits.DPS), 0.034925)
+    print(velocity)
+    wait(5000, MSEC)
+    drivetrain.stop
     
