@@ -7,10 +7,11 @@ data_buffer = csvHeaderText + "\n"
         
 def recorder(numOfDataEntries, polling_delay_msec):
     for i in range(numOfDataEntries):
-        data_buffer + "%1.3f" % brain.timer.value() + "\n"
-        data_buffer + "%1.3f" % brain_inertial.acceleration(XAXIS) + ","
-        data_buffer + "%1.3f" % brain_inertial.acceleration(YAXIS) + ","
-        data_buffer + "%1.3f" % brain_inertial.acceleration(ZAXIS) + "\n"
+        global data_buffer
+        data_buffer += "%1.3f" % brain.timer.value() + ","
+        data_buffer += "%1.3f" % brain_inertial.acceleration(XAXIS) + ","
+        data_buffer += "%1.3f" % brain_inertial.acceleration(YAXIS) + ","
+        data_buffer += "%1.3f" % brain_inertial.acceleration(ZAXIS) + "\n"
         wait(polling_delay_msec)
         # brain.screen.print(data_buffer)
         # with open("data_buffer.csv", "a") as f:
@@ -21,7 +22,7 @@ def recorder(numOfDataEntries, polling_delay_msec):
         #     brain.screen.set_cursor(1, 1)
         #     brain.screen.clear_screen()
         
-recorder(20, 500)
+recorder(20, 1000)
 
 if not brain.sdcard.is_inserted():
     brain.screen.set_cursor(1,1)
