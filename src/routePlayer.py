@@ -1,59 +1,54 @@
 from vex import *
+
 brain = Brain()
-brain_inertial = Inertial(Ports.PORT16)
-csvHeaderText = "time, x, y, z"
 sd_file_name = "envRecording.csv"
 
-import csv
-import math
+# Define the motors exactly as they are in the recorder
+left1_motor = Motor(Ports.PORT11, False)
+left2_motor = Motor(Ports.PORT12, False)
+left_drive_group = MotorGroup(left1_motor, left2_motor)
+
+right1_motor = Motor(Ports.PORT8, True)
+right2_motor = Motor(Ports.PORT10, True)
+right_drive_group = MotorGroup(right1_motor, right2_motor)
 
 def read_csv_as_dict(file_name):
-    """Reads a CSV file and returns a dict of lists, similar to a DataFrame."""
+    """Reads a CSV file and returns a dict of lists, no imports needed."""
     data = {}
     with open(file_name, "r") as f:
-        reader = csv.reader(f)
-        headers = [h.strip() for h in next(reader)]
+        lines = f.read().strip().split("\n")
+        headers = [h.strip() for h in lines[0].split(",")]
         for h in headers:
             data[h] = []
-        for row in reader:
-            for h, val in zip(headers, row):
+        for line in lines[1:]:
+            values = line.split(",")
+            for h, val in zip(headers, values):
                 data[h].append(float(val.strip()))
     return data
 
-def total_inches_traveled(sd_file_name):
+def play_route_totals(sd_file_name):
     """
-    Reads a CSV with columns: time, x, y, z (accelerations in m/s^2)
-    and computes total inches traveled by integrating acceleration -> velocity -> distance.
+    Reads the CSV, finds the total recorded degrees for left and right,
+    and commands the motors to spin that total amount.
     """
     df = read_csv_as_dict(sd_file_name)
 
-    velocity_x = 0.0
-    velocity_y = 0.0
-    velocity_z = 0.0
-    total_distance_m = 0.0
+    # Get the very last recorded position (total degrees traveled)
+    total_left_deg = df["left_deg"][-1]
+    total_right_deg = df["right_deg"][-1]
 
-    for i in range(1, len(df["time"])):
-        dt = df["time"][i] - df["time"][i - 1]
+    brain.screen.clear_screen()
+    brain.screen.set_cursor(1, 1)
+    brain.screen.print("Left Target: ", total_left_deg)
+    brain.screen.set_cursor(2, 1)
+    brain.screen.print("Right Target: ", total_right_deg)
 
-        # Average acceleration over the interval (trapezoidal integration)
-        avg_ax = (df["x"][i] + df["x"][i - 1]) / 2.0
-        avg_ay = (df["y"][i] + df["y"][i - 1]) / 2.0
-        avg_az = (df["z"][i] + df["z"][i - 1]) / 2.0
+    # Set both to spin. 'wait=False' on the first one ensures they spin at the same time
+    left_drive_group.spin_for(FORWARD, total_left_deg, DEGREES, wait=False)
+    right_drive_group.spin_for(FORWARD, total_right_deg, DEGREES, wait=True)
+    
+    brain.screen.set_cursor(4, 1)
+    brain.screen.print("Playback Complete")
 
-        # Update velocities
-        velocity_x += avg_ax * dt
-        velocity_y += avg_ay * dt
-        velocity_z += avg_az * dt
-
-        # Displacement in this interval
-        dx = velocity_x * dt
-        dy = velocity_y * dt
-        dz = velocity_z * dt
-
-        # Euclidean distance for this time step
-        step_distance = math.sqrt(dx**2 + dy**2 + dz**2)
-        total_distance_m += step_distance
-
-    # Convert meters to inches
-    total_inches = total_distance_m * 39.3701
-    return total_inches
+# Execute playback
+play_route_totals(sd_file_name)
