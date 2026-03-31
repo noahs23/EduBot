@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>EduBot — Controller</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  :root {
+    --bg: #0a0a0c;
+    --surface: rgba(255,255,255,.04);
+    --surface-hi: rgba(255,255,255,.07);
+    --border: rgba(255,255,255,.08);
+    --text: #f0f0f0;
+    --muted: #6a6a78;
+    --lime: #b5f542;
+    --lime-dim: #7aa82e;
+    --lime-glow: rgba(181,245,66,.2);
+    --red: #ff4444;
+    --red-glow: rgba(255,68,68,.15);
+    --cyan: #3ef0e8;
+    --cyan-glow: rgba(62,240,232,.15);
+    --orange: #ffa53b;
+    --orange-glow: rgba(255,165,59,.15);
+    --radius: 10px;
+  }
+ 
+  body {
+    font-family: Impact, 'Arial Black', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem 1rem 4rem;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    position: relative;
+  }
+ 
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(181,245,66,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(181,245,66,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+ 
+  .scanline {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--lime-glow), transparent);
+    z-index: 1;
+    pointer-events: none;
+    animation: scan 4s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0% { top: -3px; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+ 
+  .corner-deco {
+    position: fixed;
+    width: 40px;
+    height: 40px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: .15;
+  }
+  .corner-deco.tl { top: 12px; left: 12px; border-top: 2px solid var(--lime); border-left: 2px solid var(--lime); }
+  .corner-deco.tr { top: 12px; right: 12px; border-top: 2px solid var(--lime); border-right: 2px solid var(--lime); }
+  .corner-deco.bl { bottom: 12px; left: 12px; border-bottom: 2px solid var(--lime); border-left: 2px solid var(--lime); }
+  .corner-deco.br { bottom: 12px; right: 12px; border-bottom: 2px solid var(--lime); border-right: 2px solid var(--lime); }
+ 
+  .content { position: relative; z-index: 2; width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; }
+ 
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .2rem;
+  }
+ 
+  .robot-icon svg {
+    width: 44px; height: 44px;
+    filter: drop-shadow(0 0 8px var(--lime-glow));
+  }
+ 
+  h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    line-height: 1;
+  }
+  h1 .accent { color: var(--lime); }
+ 
+  .subtitle {
+    font-family: 'Courier New', monospace;
+    font-weight: normal;
+    color: var(--muted);
+    font-size: .7rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+ 
+  .status-bar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .7rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+  }
+ 
+  .status-left { display: flex; align-items: center; gap: .5rem; }
+ 
+  .status-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .status-dot.ready { background: var(--lime); box-shadow: 0 0 8px var(--lime-glow); }
+  .status-dot.moving { background: var(--orange); animation: pulse 1s infinite; }
+  .status-dot.disconnected { background: var(--red); }
+  .status-dot.connecting { background: var(--cyan); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+ 
+  .status-label {
+    font-size: .85rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+ 
+  .status-position {
+    font-family: 'Courier New', monospace;
+    font-size: .75rem;
+    color: var(--cyan);
+    letter-spacing: .03em;
+  }
+ 
+  .section-title {
+    width: 100%;
+    font-family: 'Courier New', monospace;
+    font-size: .6rem;
+    text-transform: uppercase;
+    letter-spacing: .2em;
+    color: var(--muted);
+    margin-bottom: .6rem;
+  }
+ 
+  .cp-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .55rem;
+    margin-bottom: 1.25rem;
+  }
+ 
+  .cp-btn {
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-weight: 900;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem .75rem;
+    cursor: pointer;
+    transition: transform .08s, background .15s, border-color .15s, box-shadow .2s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cp-btn:active { transform: scale(.95); }
+  .cp-btn:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+ 
+  .cp-btn.current {
+    border-color: var(--lime);
+    background: rgba(181,245,66,.06);
+    box-shadow: 0 0 20px var(--lime-glow);
+  }
+  .cp-btn.current::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--lime);
+  }
+  .cp-btn.current::after {
+    content: "HERE";
+    position: absolute;
+    top: 8px; right: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;
+    font-weight: normal;
+    letter-spacing: .1em;
+    color: var(--lime);
+  }
+ 
+  .cp-btn.target {
+    border-color: var(--orange);
+    background: rgba(255,165,59,.06);
+    animation: pulse-border 1s infinite;
+  }
+  .cp-btn.target::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--orange);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { border-color: var(--orange); }
+    50% { border-color: var(--border); }
+  }
+ 
+  .home-btn {
+    width: 100%;
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    background: var(--surface);
+    color: var(--cyan);
+    border: 1px solid rgba(62,240,232,.2);
+    border-radius: var(--radius);
+    padding: .9rem;
+    cursor: pointer;
+    transition: transform .08s, box-shadow .2s;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .home-btn:active { transform: scale(.96); }
+  .home-btn:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+  .home-btn .icon {
+    display: inline-block;
+    margin-right: .4rem;
+    vertical-align: middle;
+  }
+ 
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin-bottom: 1.25rem;
+  }
+ 
+  .log-area {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .65rem .85rem;
+    max-height: 150px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: .65rem;
+    color: var(--muted);
+    line-height: 1.7;
+    letter-spacing: .02em;
+  }
+  .log-area .entry { margin-bottom: .1rem; }
+  .log-area .entry.ok { color: var(--lime); }
+  .log-area .entry.err { color: var(--red); }
+  .log-area .entry.info { color: var(--cyan); }
+ 
+  .empty-state {
+    width: 100%;
+    text-align: center;
+    padding: 3.5rem 1rem;
+    color: var(--muted);
+  }
+  .empty-state .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--lime);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 0 auto .85rem;
+  }
+  .empty-state p {
+    font-family: 'Courier New', monospace;
+    font-size: .75rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+ 
+  .path-visual {
+    width: 100%;
+    height: 48px;
+    margin-bottom: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .path-track {
+    position: absolute;
+    top: 50%; left: 1rem; right: 1rem;
+    height: 2px;
+    background: var(--border);
+    transform: translateY(-50%);
+  }
+  .path-progress {
+    position: absolute;
+    top: 50%; left: 1rem;
+    height: 2px;
+    background: var(--lime);
+    box-shadow: 0 0 8px var(--lime-glow);
+    transform: translateY(-50%);
+    transition: width .6s ease;
+    width: 0%;
+  }
+  .path-node {
+    position: absolute;
+    top: 50%;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 2px solid var(--muted);
+    transform: translate(-50%, -50%);
+    transition: background .3s, border-color .3s, box-shadow .3s;
+  }
+  .path-node.reached {
+    background: var(--lime);
+    border-color: var(--lime);
+    box-shadow: 0 0 8px var(--lime-glow);
+  }
+  .path-node.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    box-shadow: 0 0 8px var(--orange-glow);
+    animation: pulse 1s infinite;
+  }
+  .path-node-label {
+    position: absolute;
+    top: calc(50% + 12px);
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;
+    color: var(--muted);
+    letter-spacing: .05em;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+ 
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+<div class="corner-deco tl"></div>
+<div class="corner-deco tr"></div>
+<div class="corner-deco bl"></div>
+<div class="corner-deco br"></div>
+ 
+<div class="content">
+ 
+  <div class="logo-row">
+    <div class="robot-icon">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="16" y="24" width="32" height="28" rx="4" fill="#1a1a22" stroke="#b5f542" stroke-width="2"/>
+        <rect x="22" y="32" width="8" height="6" rx="2" fill="#3ef0e8"/>
+        <rect x="34" y="32" width="8" height="6" rx="2" fill="#3ef0e8"/>
+        <rect x="26" y="44" width="12" height="3" rx="1.5" fill="#6a6a78"/>
+        <line x1="32" y1="14" x2="32" y2="24" stroke="#b5f542" stroke-width="2"/>
+        <circle cx="32" cy="12" r="3" fill="#b5f542"/>
+        <rect x="8" y="34" width="8" height="4" rx="2" fill="#6a6a78"/>
+        <rect x="48" y="34" width="8" height="4" rx="2" fill="#6a6a78"/>
+        <rect x="20" y="52" width="8" height="6" rx="2" fill="#6a6a78"/>
+        <rect x="36" y="52" width="8" height="6" rx="2" fill="#6a6a78"/>
+      </svg>
+    </div>
+    <h1>EDU<span class="accent">BOT</span></h1>
+  </div>
+  <p class="subtitle">// navigation controller</p>
+ 
+  <div class="status-bar">
+    <div class="status-left">
+      <div id="statusDot" class="status-dot disconnected"></div>
+      <span id="statusLabel" class="status-label">Connecting...</span>
+    </div>
+    <span id="statusPos" class="status-position">—</span>
+  </div>
+ 
+  <div id="pathVisual" class="path-visual" style="display:none">
+    <div class="path-track"></div>
+    <div id="pathProgress" class="path-progress"></div>
+  </div>
+ 
+  <div id="mainContent">
+    <div class="empty-state">
+      <div class="spinner"></div>
+      <p>Connecting to EduBot...</p>
+    </div>
+  </div>
+ 
+  <div id="logSection" style="display:none">
+    <div class="section-title" style="margin-top:.5rem">Activity Log</div>
+    <div id="logArea" class="log-area"></div>
+  </div>
+ 
+</div>
+ 
+<script>
+  const statusDot   = document.getElementById('statusDot');
+  const statusLabel  = document.getElementById('statusLabel');
+  const statusPos    = document.getElementById('statusPos');
+  const mainContent  = document.getElementById('mainContent');
+  const logSection   = document.getElementById('logSection');
+  const logArea      = document.getElementById('logArea');
+  const pathVisual   = document.getElementById('pathVisual');
+  const pathProgress = document.getElementById('pathProgress');
+ 
+  let lastState = '';
+  let lastPosition = '';
+  let knownCheckpoints = [];
+  let movingTarget = '';
+ 
+  function addLog(msg, cls) {
+    const div = document.createElement('div');
+    div.className = 'entry ' + (cls || '');
+    const ts = new Date().toLocaleTimeString('en', {hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    div.textContent = '[' + ts + '] ' + msg;
+    logArea.prepend(div);
+    if (logArea.children.length > 50) logArea.lastChild.remove();
+  }
+ 
+  function buildPathVisual(cps, position) {
+    pathVisual.style.display = 'block';
+    const existing = pathVisual.querySelectorAll('.path-node, .path-node-label');
+    existing.forEach(el => el.remove());
+ 
+    const total = cps.length + 1;
+    const posIndex = position === 'HOME' ? 0 : (cps.indexOf(position) + 1);
+ 
+    for (let i = 0; i <= cps.length; i++) {
+      const pct = (i / (total - 1)) * 100;
+      const node = document.createElement('div');
+      node.className = 'path-node';
+      if (i <= posIndex) node.classList.add('reached');
+      if (i === posIndex) node.classList.add('active');
+      node.style.left = 'calc(1rem + ' + pct + '% * (100% - 2rem) / 100%)';
+      node.style.left = 'calc(1rem + (100% - 2rem) * ' + (pct/100) + ')';
+      pathVisual.appendChild(node);
+ 
+      const label = document.createElement('div');
+      label.className = 'path-node-label';
+      label.textContent = i === 0 ? 'HOME' : cps[i-1];
+      label.style.left = node.style.left;
+      pathVisual.appendChild(label);
+    }
+ 
+    const progressPct = (posIndex / (total - 1)) * 100;
+    pathProgress.style.width = 'calc((100% - 2rem) * ' + (progressPct/100) + ')';
+  }
+ 
+  function renderCheckpoints(cps, state, position) {
+    let html = '<div class="section-title">Checkpoints</div>';
+    html += '<div class="cp-grid">';
+    for (const cp of cps) {
+      let cls = 'cp-btn';
+      let disabled = '';
+      if (cp === position) cls += ' current';
+      if (cp === movingTarget && state === 'moving') cls += ' target';
+      if (state === 'moving' || state !== 'ready') disabled = ' disabled';
+      html += '<button class="' + cls + '"' + disabled +
+              ' onclick="gotoCheckpoint(\'' + cp + '\')">' + cp + '</button>';
+    }
+    html += '</div>';
+ 
+    let homeDisabled = (state === 'moving' || state !== 'ready') ? ' disabled' : '';
+    html += '<button class="home-btn"' + homeDisabled +
+            ' onclick="goHome()"><span class="icon">&#9664;</span> Return to Start</button>';
+ 
+    mainContent.innerHTML = html;
+    buildPathVisual(cps, position);
+  }
+ 
+  async function pollStatus() {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+ 
+      if (data.state !== lastState || data.position !== lastPosition ||
+          JSON.stringify(data.checkpoints) !== JSON.stringify(knownCheckpoints)) {
+ 
+        lastState = data.state;
+        lastPosition = data.position;
+        knownCheckpoints = data.checkpoints;
+ 
+        statusDot.className = 'status-dot ' + data.state;
+        statusLabel.textContent = data.state === 'ready' ? 'Ready' :
+                                  data.state === 'moving' ? 'Moving...' :
+                                  data.state === 'connecting' ? 'Connecting...' :
+                                  'Disconnected';
+        statusPos.textContent = data.position || '—';
+ 
+        if (data.state !== 'moving') movingTarget = '';
+ 
+        if (data.checkpoints.length > 0) {
+          logSection.style.display = 'block';
+          renderCheckpoints(data.checkpoints, data.state, data.position);
+        }
+      }
+    } catch (e) {
+      statusDot.className = 'status-dot disconnected';
+      statusLabel.textContent = 'Server Offline';
+      statusPos.textContent = '—';
+    }
+  }
+ 
+  async function gotoCheckpoint(cp) {
+    if (lastState !== 'ready') return;
+    movingTarget = cp;
+    renderCheckpoints(knownCheckpoints, 'moving', lastPosition);
+    addLog('Navigating to ' + cp + '...', 'info');
+    try {
+      const res = await fetch('/api/goto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkpoint: cp })
+      });
+      const data = await res.json();
+      if (!data.ok) addLog('Error: ' + (data.error || 'failed'), 'err');
+      else addLog('Command sent: GOTO ' + cp, 'ok');
+    } catch (e) {
+      addLog('Network error', 'err');
+    }
+  }
+ 
+  async function goHome() {
+    if (lastState !== 'ready') return;
+    movingTarget = 'HOME';
+    addLog('Returning home...', 'info');
+    try {
+      const res = await fetch('/api/home', { method: 'POST' });
+      const data = await res.json();
+      if (!data.ok) addLog('Error: ' + (data.error || 'failed'), 'err');
+      else addLog('Command sent: HOME', 'ok');
+    } catch (e) {
+      addLog('Network error', 'err');
+    }
+  }
+ 
+  setInterval(pollStatus, 500);
+  pollStatus();
+</script>
+ 
+</body>
+</html>

@@ -14,52 +14,80 @@
 # Library imports
 from vex import *
 
-# Brain should be defined by default
-brain=Brain()
-
-# Robot configuration code
-left1_motor = Motor(Ports.PORT11, False)
-left2_motor = Motor(Ports.PORT12, False)
-left_drive_group = MotorGroup(left1_motor, left2_motor)
-right1_motor = Motor(Ports.PORT8, True)
-right2_motor = Motor(Ports.PORT10, True)
-right_drive_group = MotorGroup(right1_motor, right2_motor)
-
-drivetrain = DriveTrain(left_drive_group, right_drive_group, 319.19, 295, 40, MM, 1)
-
-# Begin project code
-
-import math
-
-def degrees_per_second_to_m_s(degrees_per_second, radius_meters):
-    """
-    Converts angular velocity in degrees per second to linear velocity in meters per second.
-
-    Args:
-        degrees_per_second (float): The angular velocity to convert.
-        radius_meters (float): The radius of the rotation in meters.
-
-    Returns:
-        float: The linear velocity in meters per second.
-    """
-    # 1. Convert degrees per second to radians per second
-    # There are 180 degrees in pi radians
-    radians_per_second = degrees_per_second * (math.pi / 180.0)
-    
-    # 2. Calculate linear velocity (v = omega * r)
-    # v (m/s) = omega (rad/s) * r (m)
-    linear_velocity_m_s = radians_per_second * radius_meters
-    
-    return linear_velocity_m_s
-
-# --- Example Usage ---
-# Example: A point on a wheel rotating at 90 degrees/sec, 
-# 0.5 meters from the center (radius).
-velocityMS = 0.19
-drivetrain.drive(FORWARD)
-wait(1/velocityMS, SECONDS)
-drivetrain.stop()
-
+brain.screen.clear_screen()
+brain.screen.set_cursor(1, 1)
+brain.screen.print("Loading route...")
+ 
+data = load_recording(sd_file_name)
+cumulative = compute_cumulative_distances(data)
+cp_table = build_checkpoint_table(data, cumulative)
+ 
+cp_names = sorted(cp_table.keys())
+current_inches = 0.0
+ 
+brain.screen.clear_screen()
+brain.screen.set_cursor(1, 1)
+brain.screen.print("Ready - " + str(len(cp_names)) + " CPs")
+brain.screen.next_row()
+brain.screen.print("Waiting for command...")
+ 
+send_serial("READY:" + ",".join(cp_names))
+ 
+while True:
+    line = read_serial_line()
+    if line is None:
+        wait(20, MSEC)
+        continue
+ 
+    if line.startswith("GOTO:"):
+        target = line[5:].strip()
+ 
+        if target not in cp_table:
+            send_serial("ERR:unknown checkpoint")
+            brain.screen.set_cursor(3, 1)
+            brain.screen.clear_row()
+            brain.screen.print("Unknown: " + target)
+            continue
+ 
+        target_inches = cp_table[target]
+        delta = target_inches - current_inches
+ 
+        brain.screen.set_cursor(2, 1)
+        brain.screen.clear_row()
+        brain.screen.print("-> " + target)
+        brain.screen.set_cursor(3, 1)
+        brain.screen.clear_row()
+        brain.screen.print("Dist: " + "%1.1f" % delta + " in")
+ 
+        send_serial("MOVING:" + target)
+        drive_inches(delta)
+        current_inches = target_inches
+ 
+        send_serial("ARRIVED:" + target)
+        brain.screen.set_cursor(4, 1)
+        brain.screen.clear_row()
+        brain.screen.print("At: " + target)
+ 
+    elif line == "HOME":
+        delta = -current_inches
+        brain.screen.set_cursor(2, 1)
+        brain.screen.clear_row()
+        brain.screen.print("-> HOME")
+ 
+        send_serial("MOVING:HOME")
+        drive_inches(delta)
+        current_inches = 0.0
+ 
+        send_serial("ARRIVED:HOME")
+        brain.screen.set_cursor(4, 1)
+        brain.screen.clear_row()
+        brain.screen.print("At: HOME")
+ 
+    elif line == "PING":
+        send_serial("PONG")
+ 
+    wait(20, MSEC)
+ 
 
 # Print all Drivetrain sensing values to the screen in an infinite loop
 while True:
