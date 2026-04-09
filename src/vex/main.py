@@ -13,7 +13,9 @@
 
 # Library imports
 from vex import *
-
+from routeNavigator import *
+from routePlayer import *
+brain = Brain()
 brain.screen.clear_screen()
 brain.screen.set_cursor(1, 1)
 brain.screen.print("Loading route...")

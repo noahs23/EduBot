@@ -1,17 +1,36 @@
 from vex import *
 import math
 import csv
- 
+
+
+class GenericSerial:
+    def __init__(self, port, baud_rate):
+        self.port = port
+        self.baud_rate = baud_rate
+        self.buffer = bytearray()
+
+    def available(self):
+        return len(self.buffer)
+
+    def read(self, n):
+        data = self.buffer[:n]
+        self.buffer = self.buffer[n:]
+        return data
+
+    def write(self, data):
+        pass  # Mock: no actual output
+
+
 brain = Brain()
 brain_inertial = Inertial(Ports.PORT16)
- 
+
 left1_motor = Motor(Ports.PORT11, False)
 left2_motor = Motor(Ports.PORT12, False)
 left_drive_group = MotorGroup(left1_motor, left2_motor)
 right1_motor = Motor(Ports.PORT8, True)
 right2_motor = Motor(Ports.PORT10, True)
 right_drive_group = MotorGroup(right1_motor, right2_motor)
- 
+
 serial_port = GenericSerial(Ports.PORT1, 115200)
  
 sd_file_name = "envRecording_merged.csv"
@@ -158,7 +177,7 @@ def read_serial_line():
         rx_buffer = rx_buffer[idx + 1:]
         return line
     return None
- 
- 
+
+
 def send_serial(msg):
     serial_port.write(bytearray(msg + "\n", "utf-8"))
