@@ -7,272 +7,53 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>EduBot — Display</title>
 <style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-  :root {
-    --bg: #0a0a0c;
-    --surface: rgba(255,255,255,.04);
-    --border: rgba(255,255,255,.08);
-    --text: #f0f0f0;
-    --muted: #6a6a78;
-    --lime: #b5f542;
-    --lime-glow: rgba(181,245,66,.2);
-    --cyan: #3ef0e8;
-    --cyan-glow: rgba(62,240,232,.12);
-    --orange: #ffa53b;
-    --red: #ff4444;
-  }
-
-  body {
-    font-family: Impact, 'Arial Black', sans-serif;
-    background: #000;
-    color: var(--text);
-    width: 100vw;
-    height: 100dvh;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .grid-bg {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(rgba(181,245,66,.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(181,245,66,.02) 1px, transparent 1px);
-    background-size: 50px 50px;
-  }
-
-  .corner-deco {
-    position: fixed;
-    width: 50px; height: 50px;
-    z-index: 50;
-    pointer-events: none;
-    opacity: .12;
-  }
-  .corner-deco.tl { top: 16px; left: 16px; border-top: 2px solid var(--lime); border-left: 2px solid var(--lime); }
-  .corner-deco.tr { top: 16px; right: 16px; border-top: 2px solid var(--lime); border-right: 2px solid var(--lime); }
-  .corner-deco.bl { bottom: 16px; left: 16px; border-bottom: 2px solid var(--lime); border-left: 2px solid var(--lime); }
-  .corner-deco.br { bottom: 16px; right: 16px; border-bottom: 2px solid var(--lime); border-right: 2px solid var(--lime); }
-
-  .video-container {
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-  }
-
-  .video-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #000;
-  }
-
-  .idle-screen {
-    position: fixed;
-    inset: 0;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    transition: opacity .5s;
-  }
-  .idle-screen.hidden { opacity: 0; pointer-events: none; }
-
-  .idle-robot svg {
-    width: 120px;
-    height: 120px;
-    filter: drop-shadow(0 0 20px var(--lime-glow));
-    animation: float 3s ease-in-out infinite;
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-
-  .idle-title {
-    font-size: 3rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    text-align: center;
-  }
-  .idle-title .accent { color: var(--lime); }
-
-  .idle-status {
-    font-family: 'Courier New', monospace;
-    font-size: .85rem;
-    color: var(--muted);
-    letter-spacing: .15em;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-  }
-  .idle-status .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--muted);
-  }
-  .idle-status.connected .dot {
-    background: var(--lime);
-    box-shadow: 0 0 8px var(--lime-glow);
-    animation: blink 1.2s infinite;
-  }
-  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.3; } }
-
-  .idle-checkpoint {
-    font-family: 'Courier New', monospace;
-    font-size: .75rem;
-    color: var(--cyan);
-    letter-spacing: .1em;
-  }
-
-  .now-playing-bar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: .6rem;
-    padding: .5rem 1rem;
-    background: linear-gradient(180deg, rgba(0,0,0,.8) 0%, transparent 100%);
-    opacity: 1;
-    transition: opacity .5s;
-    pointer-events: none;
-  }
-  .now-playing-bar.hidden { opacity: 0; }
-
-  .np-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--red);
-    animation: blink .8s infinite;
-    flex-shrink: 0;
-  }
-
-  .np-text {
-    font-family: 'Courier New', monospace;
-    font-size: .7rem;
-    color: var(--text);
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    opacity: .8;
-  }
-
-  .progress-bar {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 4px;
-    z-index: 40;
-    background: rgba(255,255,255,.05);
-  }
-  .progress-bar.hidden { display: none; }
-  .progress-fill {
-    height: 100%;
-    background: var(--lime);
-    box-shadow: 0 0 10px var(--lime-glow);
-    width: 0%;
-    transition: width .3s linear;
-  }
-
-  .video-config {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 50;
-    font-family: 'Courier New', monospace;
-    font-size: .6rem;
-    color: var(--muted);
-    letter-spacing: .05em;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: .4rem .7rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: opacity .3s;
-  }
-  .video-config:hover { color: var(--text); }
-  .video-config.hidden { opacity: 0; pointer-events: none; }
-
-  .config-panel {
-    position: fixed;
-    bottom: 50px; right: 20px;
-    z-index: 55;
-    background: rgba(10,10,12,.95);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1rem;
-    min-width: 280px;
-    max-height: 70vh;
-    overflow-y: auto;
-    display: none;
-  }
-  .config-panel.open { display: block; }
-
-  .config-panel h3 {
-    font-size: .9rem;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-bottom: .75rem;
-    color: var(--lime);
-  }
-
-  .config-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: .5rem;
-    margin-bottom: .5rem;
-    padding: .4rem .5rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-  }
-
-  .config-row .cp-name {
-    font-size: .8rem;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    flex-shrink: 0;
-  }
-
-  .config-row .video-name {
-    font-family: 'Courier New', monospace;
-    font-size: .65rem;
-    color: var(--cyan);
-    text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 160px;
-  }
-  .config-row .video-name.none { color: var(--muted); }
-
-  .config-note {
-    font-family: 'Courier New', monospace;
-    font-size: .55rem;
-    color: var(--muted);
-    margin-top: .75rem;
-    line-height: 1.6;
-    letter-spacing: .03em;
-  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{--bg:#0a0a0c;--surface:rgba(255,255,255,.04);--border:rgba(255,255,255,.08);
+    --text:#f0f0f0;--muted:#6a6a78;--lime:#b5f542;--lime-glow:rgba(181,245,66,.2);
+    --cyan:#3ef0e8;--red:#ff4444}
+  body{font-family:Impact,'Arial Black',sans-serif;background:#000;color:var(--text);
+    width:100vw;height:100dvh;overflow:hidden;position:relative}
+  .grid-bg{position:fixed;inset:0;pointer-events:none;
+    background:linear-gradient(rgba(181,245,66,.02) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(181,245,66,.02) 1px,transparent 1px);background-size:50px 50px}
+  .corner-deco{position:fixed;width:50px;height:50px;z-index:50;pointer-events:none;opacity:.12}
+  .corner-deco.tl{top:16px;left:16px;border-top:2px solid var(--lime);border-left:2px solid var(--lime)}
+  .corner-deco.tr{top:16px;right:16px;border-top:2px solid var(--lime);border-right:2px solid var(--lime)}
+  .corner-deco.bl{bottom:16px;left:16px;border-bottom:2px solid var(--lime);border-left:2px solid var(--lime)}
+  .corner-deco.br{bottom:16px;right:16px;border-bottom:2px solid var(--lime);border-right:2px solid var(--lime)}
+  .video-container{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#000}
+  .video-container video{width:100%;height:100%;object-fit:contain;background:#000}
+  .idle-screen{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:1rem;transition:opacity .5s}
+  .idle-screen.hidden{opacity:0;pointer-events:none}
+  .idle-robot svg{width:120px;height:120px;filter:drop-shadow(0 0 20px var(--lime-glow));animation:float 3s ease-in-out infinite}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .idle-title{font-size:3rem;font-weight:900;text-transform:uppercase;letter-spacing:.1em;text-align:center}
+  .idle-title .accent{color:var(--lime)}
+  .idle-status{font-family:'Courier New',monospace;font-size:.85rem;color:var(--muted);
+    letter-spacing:.15em;text-transform:uppercase;display:flex;align-items:center;gap:.5rem}
+  .idle-status .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .idle-status.connected .dot{background:var(--lime);box-shadow:0 0 8px var(--lime-glow);animation:blink 1.2s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .idle-cp{font-family:'Courier New',monospace;font-size:.75rem;color:var(--cyan);letter-spacing:.1em}
+  .tap-hint{font-family:'Courier New',monospace;font-size:.6rem;color:var(--muted);
+    letter-spacing:.08em;margin-top:1rem;opacity:.5}
+  .now-playing{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;align-items:center;
+    gap:.6rem;padding:.5rem 1rem;background:linear-gradient(180deg,rgba(0,0,0,.8),transparent);
+    opacity:1;transition:opacity .5s;pointer-events:none}
+  .now-playing.hidden{opacity:0}
+  .np-dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blink .8s infinite;flex-shrink:0}
+  .np-text{font-family:'Courier New',monospace;font-size:.7rem;color:var(--text);
+    letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+  .progress-bar{position:fixed;bottom:0;left:0;right:0;height:4px;z-index:40;background:rgba(255,255,255,.05)}
+  .progress-bar.hidden{display:none}
+  .progress-fill{height:100%;background:var(--lime);box-shadow:0 0 10px var(--lime-glow);width:0%;transition:width .3s linear}
 </style>
 </head>
 <body>
-
 <div class="grid-bg"></div>
-<div class="corner-deco tl"></div>
-<div class="corner-deco tr"></div>
-<div class="corner-deco bl"></div>
-<div class="corner-deco br"></div>
+<div class="corner-deco tl"></div><div class="corner-deco tr"></div>
+<div class="corner-deco bl"></div><div class="corner-deco br"></div>
 
 <div id="idleScreen" class="idle-screen">
   <div class="idle-robot">
@@ -290,206 +71,109 @@
     </svg>
   </div>
   <div class="idle-title">EDU<span class="accent">BOT</span></div>
-  <div id="idleStatus" class="idle-status">
-    <span class="dot"></span>
-    <span id="idleStatusText">Connecting...</span>
-  </div>
-  <div id="idleCheckpoint" class="idle-checkpoint"></div>
+  <div id="idleStatus" class="idle-status"><span class="dot"></span><span id="idleStatusText">Connecting...</span></div>
+  <div id="idleCp" class="idle-cp"></div>
+  <div class="tap-hint">Tap screen once to enable video playback</div>
 </div>
 
 <div id="videoContainer" class="video-container" style="display:none">
   <video id="videoPlayer" playsinline></video>
 </div>
-
-<div id="nowPlaying" class="now-playing-bar hidden">
-  <div class="np-dot"></div>
-  <span id="npText" class="np-text"></span>
+<div id="nowPlaying" class="now-playing hidden">
+  <div class="np-dot"></div><span id="npText" class="np-text"></span>
 </div>
-
-<div class="progress-bar hidden" id="progressBar">
-  <div class="progress-fill" id="progressFill"></div>
-</div>
-
-<div id="configBtn" class="video-config">Videos</div>
-
-<div id="configPanel" class="config-panel">
-  <h3>Video Mapping</h3>
-  <div id="configList"></div>
-  <div class="config-note">
-    Place video files in the <strong>videos/</strong> folder on the Pi.
-    Name them to match checkpoints: cp1.mp4, cp2.mp4, etc.
-    Supported: .mp4, .webm, .mov, .m4v
-  </div>
-</div>
+<div class="progress-bar hidden" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
 
 <script>
-  const idleScreen     = document.getElementById('idleScreen');
-  const idleStatus     = document.getElementById('idleStatus');
-  const idleStatusText = document.getElementById('idleStatusText');
-  const idleCheckpoint = document.getElementById('idleCheckpoint');
-  const videoContainer = document.getElementById('videoContainer');
-  const videoPlayer    = document.getElementById('videoPlayer');
-  const nowPlaying     = document.getElementById('nowPlaying');
-  const npText         = document.getElementById('npText');
-  const progressBar    = document.getElementById('progressBar');
-  const progressFill   = document.getElementById('progressFill');
-  const configBtn      = document.getElementById('configBtn');
-  const configPanel    = document.getElementById('configPanel');
-  const configList     = document.getElementById('configList');
+const idleScreen=document.getElementById('idleScreen');
+const idleStatus=document.getElementById('idleStatus');
+const idleStatusText=document.getElementById('idleStatusText');
+const idleCp=document.getElementById('idleCp');
+const videoContainer=document.getElementById('videoContainer');
+const videoPlayer=document.getElementById('videoPlayer');
+const nowPlaying=document.getElementById('nowPlaying');
+const npText=document.getElementById('npText');
+const progressBar=document.getElementById('progressBar');
+const progressFill=document.getElementById('progressFill');
 
-  let videoMap = {};
-  let isPlaying = false;
-  let videoQueue = [];
+let videoUrls={};
+let isPlaying=false;
+let videoQueue=[];
+let tapped=false;
 
-  configBtn.addEventListener('click', () => {
-    configPanel.classList.toggle('open');
+document.body.addEventListener('click',function(){tapped=true;},{ once:true });
+
+async function loadVideos(){
+  try{const r=await fetch('/api/videos');const d=await r.json();videoUrls=d.videos||{};}catch(e){}}
+
+function playVideo(checkpoint){
+  const src=videoUrls[checkpoint];
+  if(!src){showIdle(checkpoint);return;}
+  if(isPlaying){videoQueue.push(checkpoint);return;}
+  isPlaying=true;
+  idleScreen.classList.add('hidden');
+  videoContainer.style.display='flex';
+  nowPlaying.classList.remove('hidden');
+  npText.textContent='Playing: '+checkpoint;
+  progressBar.classList.remove('hidden');
+  videoPlayer.src=src;
+  videoPlayer.currentTime=0;
+  const p=videoPlayer.play();
+  if(p)p.catch(function(){
+    videoContainer.addEventListener('click',function h(){videoPlayer.play();videoContainer.removeEventListener('click',h);});
   });
+}
 
-  async function loadVideoMap() {
-    try {
-      const res = await fetch('/api/videos');
-      const data = await res.json();
-      videoMap = data.videos || {};
-      updateConfigList();
-    } catch (e) {
-      console.error('Failed to load video map', e);
-    }
-  }
+videoPlayer.addEventListener('timeupdate',function(){
+  if(videoPlayer.duration){progressFill.style.width=(videoPlayer.currentTime/videoPlayer.duration*100)+'%';}
+});
 
-  async function loadCheckpoints() {
-    try {
-      const res = await fetch('/api/status');
-      const data = await res.json();
-      return data.checkpoints || [];
-    } catch (e) {
-      return [];
-    }
-  }
+videoPlayer.addEventListener('ended',function(){
+  isPlaying=false;
+  videoContainer.style.display='none';
+  nowPlaying.classList.add('hidden');
+  progressBar.classList.add('hidden');
+  progressFill.style.width='0%';
+  if(videoQueue.length>0){setTimeout(function(){playVideo(videoQueue.shift());},500);}
+  else{idleScreen.classList.remove('hidden');}
+});
 
-  async function updateConfigList() {
-    const cps = await loadCheckpoints();
-    let html = '';
-    for (const cp of cps) {
-      const video = videoMap[cp];
-      const vname = video ? video.split('/').pop() : 'no video';
-      const cls = video ? 'video-name' : 'video-name none';
-      html += '<div class="config-row">' +
-              '<span class="cp-name">' + cp + '</span>' +
-              '<span class="' + cls + '">' + vname + '</span>' +
-              '</div>';
-    }
-    if (cps.length === 0) {
-      html = '<div class="config-row"><span class="cp-name" style="color:var(--muted)">No checkpoints loaded</span></div>';
-    }
-    configList.innerHTML = html;
-  }
+function showIdle(cp){
+  idleScreen.classList.remove('hidden');
+  videoContainer.style.display='none';
+  idleCp.textContent=cp&&cp!=='HOME'?'Location: '+cp:'';
+}
 
-  function playVideo(checkpoint) {
-    const src = videoMap[checkpoint];
-    if (!src) {
-      showIdleAt(checkpoint);
-      return;
-    }
-
-    if (isPlaying) {
-      videoQueue.push(checkpoint);
-      return;
-    }
-
-    isPlaying = true;
-    idleScreen.classList.add('hidden');
-    videoContainer.style.display = 'flex';
-    configBtn.classList.add('hidden');
-
-    nowPlaying.classList.remove('hidden');
-    npText.textContent = 'Playing: ' + checkpoint;
-    progressBar.classList.remove('hidden');
-
-    videoPlayer.src = src;
-    videoPlayer.currentTime = 0;
-
-    const playPromise = videoPlayer.play();
-    if (playPromise) {
-      playPromise.catch(function() {
-        videoContainer.addEventListener('click', function handler() {
-          videoPlayer.play();
-          videoContainer.removeEventListener('click', handler);
-        });
-      });
-    }
-  }
-
-  videoPlayer.addEventListener('timeupdate', function() {
-    if (videoPlayer.duration) {
-      const pct = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-      progressFill.style.width = pct + '%';
-    }
-  });
-
-  videoPlayer.addEventListener('ended', function() {
-    isPlaying = false;
-    videoContainer.style.display = 'none';
-    nowPlaying.classList.add('hidden');
-    progressBar.classList.add('hidden');
-    progressFill.style.width = '0%';
-    configBtn.classList.remove('hidden');
-
-    if (videoQueue.length > 0) {
-      const next = videoQueue.shift();
-      setTimeout(function() { playVideo(next); }, 500);
-    } else {
-      idleScreen.classList.remove('hidden');
-    }
-  });
-
-  function showIdleAt(checkpoint) {
-    idleScreen.classList.remove('hidden');
-    videoContainer.style.display = 'none';
-    if (checkpoint && checkpoint !== 'HOME') {
-      idleCheckpoint.textContent = 'Location: ' + checkpoint;
-    } else {
-      idleCheckpoint.textContent = '';
-    }
-  }
-
-  function connectSSE() {
-    const es = new EventSource('/api/events');
-
-    es.onmessage = function(e) {
-      try {
-        const data = JSON.parse(e.data);
-
-        if (data.type === 'connected') {
-          idleStatus.classList.add('connected');
-          idleStatusText.textContent = 'Connected — Waiting';
-          loadVideoMap();
-        }
-
-        if (data.type === 'arrived') {
-          idleStatus.classList.add('connected');
-          idleStatusText.textContent = 'At ' + data.checkpoint;
-          if (data.checkpoint === 'HOME') {
-            showIdleAt('HOME');
-          } else {
-            playVideo(data.checkpoint);
-          }
-        }
-      } catch (err) {
-        console.error('SSE parse error', err);
+function connectSSE(){
+  const es=new EventSource('/api/events');
+  es.onmessage=function(e){
+    try{
+      const d=JSON.parse(e.data);
+      if(d.type==='connected'){
+        idleStatus.classList.add('connected');
+        idleStatusText.textContent='Connected — Waiting';
+        loadVideos();
       }
-    };
+      if(d.type==='arrived'){
+        idleStatus.classList.add('connected');
+        idleStatusText.textContent='At '+d.checkpoint;
+        loadVideos().then(function(){
+          if(d.checkpoint==='HOME')showIdle('HOME');
+          else playVideo(d.checkpoint);
+        });
+      }
+    }catch(err){}
+  };
+  es.onerror=function(){
+    idleStatus.classList.remove('connected');
+    idleStatusText.textContent='Reconnecting...';
+    es.close();
+    setTimeout(connectSSE,3000);
+  };
+}
 
-    es.onerror = function() {
-      idleStatus.classList.remove('connected');
-      idleStatusText.textContent = 'Reconnecting...';
-      es.close();
-      setTimeout(connectSSE, 3000);
-    };
-  }
-
-  loadVideoMap();
-  connectSSE();
+loadVideos();
+connectSSE();
 </script>
-
 </body>
 </html>
